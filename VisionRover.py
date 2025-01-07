@@ -1,21 +1,8 @@
 #!/usr/bin/env python
-import importlib
-import io
-import json
 import logging
-import marshal
 import os
-import re
-import ssl
-import sys
-import tarfile
-import types
-import zipfile
 from contextlib import contextmanager
 from configparser import ConfigParser, NoSectionError
-from urllib.error import HTTPError, URLError
-from urllib.request import (ProxyHandler, Request, build_opener,
-                            install_opener, urlopen)
 
 # ====================== Metadata ======================
 
@@ -117,6 +104,10 @@ def http(url, headers={}, method='GET', proxy=None, ca_verify=True, ca_file=None
     Returns:
         dict: A dict containing 'code', 'headers', 'body' of HTTP response
     """
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+    import ssl
+
     req = Request(url, headers=headers, method=method.upper())
 
     if proxy:
@@ -176,6 +167,11 @@ def _retrieve_archive(content, url):
     Returns:
         object: zipfile.ZipFile, tarfile.TarFile or None (if `contents` could not be parsed)
     """
+
+    import zipfile
+    import tarfile
+    import io
+
     content_io = io.BytesIO(content)
     try:
         tar = tarfile.open(fileobj=content_io, mode='r:*')
@@ -208,6 +204,10 @@ def _open_archive_file(archive_obj, filepath, zip_pwd=None):
     Returns:
         bytes: The content of the extracted file
     """
+
+    import zipfile
+    import tarfile
+
     logger.info(
         "[*] Attempting extraction of '%s' from archive..." % (filepath))
     if isinstance(archive_obj, tarfile.TarFile):
@@ -219,6 +219,8 @@ def _open_archive_file(archive_obj, filepath, zip_pwd=None):
 
 
 def _retrieve_compiled(content):  # <== Not Used Yet
+    import marshal
+
     try:
         # Strip the .pyc file header of Python up to 3.3
         return marshal.loads(content[8:])
@@ -245,6 +247,8 @@ def _create_pypi_url(
 The Download URL is acquired by directly querying the PyPI API:
 https://warehouse.pypa.io/api-reference/json.html
     """
+    import json
+
     url = pypi_url % module_name
     logger.debug("[+] Querying PyPI URL '%s'" % url)
     try:
@@ -337,6 +341,9 @@ class HttpImporter(object):
         self.archive = _retrieve_archive(resp['body'], url)
 
     def find_spec(self, fullname, path, target=None):
+        import importlib
+
+
         loader = self.find_module(fullname, path)
         if loader is not None:
             return importlib.machinery.ModuleSpec(
@@ -403,6 +410,10 @@ class HttpImporter(object):
         return None
 
     def create_module(self, spec):
+        import sys
+        import types
+
+
         fullname = spec.name
 
         if fullname not in self.modules:
@@ -466,6 +477,8 @@ class HttpImporter(object):
           (object): Module object containing the executed code of the specified module/package
 
         """
+        import sys
+
 
         # If the module has not been found as loadable
         # through 'find_module' method (yet)
@@ -564,6 +577,9 @@ releases.
         return None
 
     def find_spec(self, fullname, path, target=None):
+        import importlib
+
+
         loader = self.find_module(fullname, path)
         if loader is not None:
             return importlib.machinery.ModuleSpec(
@@ -627,6 +643,9 @@ def __create_git_url(service, username=None, repo=None,
 
 
 def __extract_profile_options(url=None, profile=None):
+    import re
+
+
     if profile:
         # If there is a profile name set - try it
         options = _get_options(profile)
@@ -717,6 +736,9 @@ def add_remote_repo(url=None, profile=None, importer_class=HttpImporter):
     Returns:
       HttpImporter: The `HttpImporter` object added to the `sys.meta_path`
     """
+    import sys
+
+
     options = __extract_profile_options(url, profile)
     url = options.get('url', url)
     del options['url']
@@ -738,6 +760,9 @@ def remove_remote_repo(url):
       url (str): The URL of the `HttpImporter` object to remove
 
     """
+    import sys
+
+
     # Remove trailing '/' in case it is there
     url = url if not url.endswith('/') else url[:-1]
     for importer in sys.meta_path:
